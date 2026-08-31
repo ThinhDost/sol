@@ -3,6 +3,7 @@ package engine
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -131,8 +132,32 @@ func (sm *StateManager) BuildDiscordActivity() *discord.Activity {
 		sanitizedCmd := SanitizeCommand(sm.currentCmd)
 		toolAsset := config.ResolveToolAsset(sanitizedCmd)
 
+		details := fmt.Sprintf("Running: %s", sanitizedCmd)
+		fields := strings.Fields(sanitizedCmd)
+		if len(fields) > 0 {
+			base := strings.ToLower(fields[0])
+			base = strings.TrimSuffix(base, ".exe")
+			base = strings.TrimSuffix(base, ".cmd")
+
+			switch base {
+			case "agy", "antigravity", "agy-cli", "antigravity-cli":
+				if len(fields) == 1 {
+					details = "✨ Coding with Antigravity AI"
+				} else {
+					prompt := strings.Join(fields[1:], " ")
+					details = fmt.Sprintf("🤖 AGY: %s", prompt)
+				}
+			case "claude":
+				details = "🤖 Prompting Claude Code"
+			case "copilot":
+				details = "🤖 Copilot CLI Session"
+			case "ollama":
+				details = "🧠 Running Ollama Local LLM"
+			}
+		}
+
 		return &discord.Activity{
-			Details: fmt.Sprintf("Running: %s", sanitizedCmd),
+			Details: details,
 			State:   gitCtx,
 			Timestamps: &discord.ActivityTimestamps{
 				Start: startUnix,

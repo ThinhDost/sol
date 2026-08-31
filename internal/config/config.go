@@ -118,8 +118,15 @@ var toolAssetMap = map[string]ToolAssetInfo{
 	"btop":   {AssetKey: "terminal", DisplayName: "Btop Monitor"},
 	"curl":   {AssetKey: "network", DisplayName: "cURL Transfer"},
 	"ping":   {AssetKey: "network", DisplayName: "Network Ping"},
-	"ssh":    {AssetKey: "ssh", DisplayName: "Secure Shell (SSH)"},
-	"ollama": {AssetKey: "ai", DisplayName: "Ollama AI"},
+	// AI & Coding Agents
+	"agy":             {AssetKey: "antigravity", DisplayName: "Antigravity AI Agent"},
+	"antigravity":     {AssetKey: "antigravity", DisplayName: "Antigravity AI Agent"},
+	"agy-cli":         {AssetKey: "antigravity", DisplayName: "Antigravity AI CLI"},
+	"antigravity-cli": {AssetKey: "antigravity", DisplayName: "Antigravity AI CLI"},
+	"gemini":          {AssetKey: "antigravity", DisplayName: "Gemini CLI"},
+	"claude":          {AssetKey: "ai", DisplayName: "Claude Code"},
+	"copilot":         {AssetKey: "ai", DisplayName: "GitHub Copilot"},
+	"ollama":          {AssetKey: "ai", DisplayName: "Ollama AI"},
 }
 
 // ResolveToolAsset inspects a raw command string and returns its corresponding asset info.
