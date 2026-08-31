@@ -27,42 +27,30 @@
 
 ---
 
-## 🚀 Quick Start
+## 🚀 1-Line Quick Install
 
-### 1. Build Binaries
+Run one command in your terminal. Sol will automatically download, configure your shell profile, and start the daemon silently in the background:
+
+### 🪟 Windows (PowerShell)
 ```powershell
-# Windows PowerShell
+irm https://raw.githubusercontent.com/ThinhDost/sol/main/install.ps1 | iex
+```
+
+### 🐧 Linux / 🍎 macOS (Bash & Zsh)
+```bash
+curl -fsSL https://raw.githubusercontent.com/ThinhDost/sol/main/install.sh | bash
+```
+
+> **That's it!** Discord Rich Presence is now active and will automatically update whenever you open a terminal and run commands.
+
+---
+
+### 🛠️ Manual Build (Optional)
+If you prefer building from source:
+```powershell
+git clone https://github.com/ThinhDost/sol.git
+cd sol
 .\build.ps1
-```
-Or manually using `go build`:
-```bash
-go build -ldflags="-s -w" -o bin/sol-daemon.exe ./cmd/sol-daemon
-go build -ldflags="-s -w" -o bin/sol.exe ./cmd/sol-cli
-```
-
-### 2. Start the Daemon
-```powershell
-.\bin\sol-daemon.exe
-```
-
-### 3. Install Shell Hook
-
-#### For PowerShell (Windows 10/11, PowerShell 5.1 / 7+)
-```powershell
-# One-time installation into your $PROFILE:
-powershell -ExecutionPolicy Bypass -File .\shells\powershell\install.ps1
-
-# Or test in current session:
-Import-Module .\shells\powershell\Sol.psm1
-```
-
-#### For Bash (Linux / macOS / WSL / Git Bash)
-```bash
-# Add to ~/.bashrc:
-./shells/bash/install.sh
-
-# Or test in current session:
-source ./shells/bash/sol.bash
 ```
 
 ---
