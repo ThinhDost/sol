@@ -127,6 +127,15 @@ func (sm *StateManager) BuildDiscordActivity() *discord.Activity {
 		})
 	}
 
+	largeKey := sm.cfg.LargeImageKey
+	if largeKey == "" {
+		largeKey = "fubuki"
+	}
+	largeText := sm.cfg.LargeImageText
+	if largeText == "" {
+		largeText = "Sol Terminal"
+	}
+
 	switch sm.currentState {
 	case StateRunning:
 		sanitizedCmd := SanitizeCommand(sm.currentCmd)
@@ -153,6 +162,10 @@ func (sm *StateManager) BuildDiscordActivity() *discord.Activity {
 				details = "🤖 Copilot CLI Session"
 			case "ollama":
 				details = "🧠 Running Ollama Local LLM"
+			case "docker":
+				if len(fields) >= 2 && strings.ToLower(fields[1]) == "compose" {
+					details = "🐳 Docker Compose Execution"
+				}
 			}
 		}
 
@@ -163,10 +176,10 @@ func (sm *StateManager) BuildDiscordActivity() *discord.Activity {
 				Start: startUnix,
 			},
 			Assets: &discord.ActivityAssets{
-				LargeImage: toolAsset.AssetKey,
-				LargeText:  toolAsset.DisplayName,
-				SmallImage: shellAsset,
-				SmallText:  shellDisplay,
+				LargeImage: largeKey,
+				LargeText:  largeText,
+				SmallImage: toolAsset.AssetKey,
+				SmallText:  toolAsset.DisplayName,
 			},
 			Buttons: buttons,
 		}
@@ -179,10 +192,10 @@ func (sm *StateManager) BuildDiscordActivity() *discord.Activity {
 				Start: startUnix,
 			},
 			Assets: &discord.ActivityAssets{
-				LargeImage: "sleep",
-				LargeText:  "AFK / Away",
-				SmallImage: shellAsset,
-				SmallText:  shellDisplay,
+				LargeImage: largeKey,
+				LargeText:  largeText,
+				SmallImage: "sleep",
+				SmallText:  "AFK / Away",
 			},
 			Buttons: buttons,
 		}
@@ -195,10 +208,10 @@ func (sm *StateManager) BuildDiscordActivity() *discord.Activity {
 				Start: startUnix,
 			},
 			Assets: &discord.ActivityAssets{
-				LargeImage: "terminal",
-				LargeText:  "Shell Prompt",
+				LargeImage: largeKey,
+				LargeText:  largeText,
 				SmallImage: shellAsset,
-				SmallText:  shellDisplay,
+				SmallText:  fmt.Sprintf("%s (Idle)", shellDisplay),
 			},
 			Buttons: buttons,
 		}

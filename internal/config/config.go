@@ -3,7 +3,9 @@
 package config
 
 import (
+	"encoding/json"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -18,6 +20,12 @@ const DefaultGitHubURL = "https://github.com/ThinhDost/sol"
 type Config struct {
 	// DiscordClientID is the Discord Application ID registered on Discord Developer Portal.
 	DiscordClientID string `json:"client_id"`
+
+	// LargeImageKey is the persistent main presence icon (default: "fubuki").
+	LargeImageKey string `json:"large_image_key"`
+
+	// LargeImageText is the hover tooltip for the main presence icon.
+	LargeImageText string `json:"large_image_text"`
 
 	// GitHubURL is the optional repository link added as an interactive button on your Discord profile.
 	GitHubURL string `json:"github_url,omitempty"`
@@ -48,6 +56,16 @@ func DefaultConfig() *Config {
 		clientID = DefaultDiscordClientID
 	}
 
+	largeImage := os.Getenv("SOL_LARGE_IMAGE_KEY")
+	if largeImage == "" {
+		largeImage = "fubuki"
+	}
+
+	largeText := os.Getenv("SOL_LARGE_IMAGE_TEXT")
+	if largeText == "" {
+		largeText = "Sol Terminal"
+	}
+
 	githubURL := os.Getenv("SOL_GITHUB_URL")
 	if githubURL == "" {
 		githubURL = DefaultGitHubURL
@@ -55,14 +73,72 @@ func DefaultConfig() *Config {
 
 	return &Config{
 		DiscordClientID:   clientID,
+		LargeImageKey:     largeImage,
+		LargeImageText:    largeText,
 		GitHubURL:         githubURL,
 		PipeNameWindows:   `\\.\pipe\sol-ipc`,
 		SocketPathUnix:    "/tmp/sol.sock",
 		IdleTimeout:       10 * time.Minute,
-		RateLimitInterval: 15 * time.Second,
+		RateLimitInterval: 4 * time.Second,
 		MaskSecrets:       true,
 		AnonymizeHomePath: true,
 	}
+}
+
+// LoadConfig loads configuration from files (./sol.config.json or ~/.sol/sol.config.json),
+// falling back to environment variables and default values.
+func LoadConfig() *Config {
+	cfg := DefaultConfig()
+
+	homeDir, _ := os.UserHomeDir()
+	candidatePaths := []string{
+		"sol.config.json",
+		filepath.Join(homeDir, ".sol", "sol.config.json"),
+	}
+
+	for _, path := range candidatePaths {
+		if data, err := os.ReadFile(path); err == nil {
+			var fileCfg struct {
+				ClientID          string `json:"client_id"`
+				LargeImageKey     string `json:"large_image_key"`
+				LargeImageText    string `json:"large_image_text"`
+				GitHubURL         string `json:"github_url"`
+				IdleMinutes       int    `json:"idle_timeout_minutes"`
+				RateLimitSeconds  int    `json:"rate_limit_seconds"`
+				MaskSecrets       *bool  `json:"mask_secrets"`
+				AnonymizeHomePath *bool  `json:"anonymize_home_path"`
+			}
+			if err := json.Unmarshal(data, &fileCfg); err == nil {
+				if fileCfg.ClientID != "" {
+					cfg.DiscordClientID = fileCfg.ClientID
+				}
+				if fileCfg.LargeImageKey != "" {
+					cfg.LargeImageKey = fileCfg.LargeImageKey
+				}
+				if fileCfg.LargeImageText != "" {
+					cfg.LargeImageText = fileCfg.LargeImageText
+				}
+				if fileCfg.GitHubURL != "" {
+					cfg.GitHubURL = fileCfg.GitHubURL
+				}
+				if fileCfg.IdleMinutes > 0 {
+					cfg.IdleTimeout = time.Duration(fileCfg.IdleMinutes) * time.Minute
+				}
+				if fileCfg.RateLimitSeconds > 0 {
+					cfg.RateLimitInterval = time.Duration(fileCfg.RateLimitSeconds) * time.Second
+				}
+				if fileCfg.MaskSecrets != nil {
+					cfg.MaskSecrets = *fileCfg.MaskSecrets
+				}
+				if fileCfg.AnonymizeHomePath != nil {
+					cfg.AnonymizeHomePath = *fileCfg.AnonymizeHomePath
+				}
+				break
+			}
+		}
+	}
+
+	return cfg
 }
 
 // ToolAssetInfo contains display information and Discord asset keys for recognized commands.
@@ -75,6 +151,33 @@ type ToolAssetInfo struct {
 
 // toolAssetMap maps common CLI commands to their Discord asset keys and friendly names.
 var toolAssetMap = map[string]ToolAssetInfo{
+	// Compound / Multi-word Commands (Checked first)
+	"docker compose":  {AssetKey: "docker", DisplayName: "Docker Compose"},
+	"docker-compose":  {AssetKey: "docker", DisplayName: "Docker Compose"},
+	"docker build":    {AssetKey: "docker", DisplayName: "Docker Build"},
+	"docker run":      {AssetKey: "docker", DisplayName: "Docker Run"},
+	"docker ps":       {AssetKey: "docker", DisplayName: "Docker Containers"},
+	"docker exec":     {AssetKey: "docker", DisplayName: "Docker Exec"},
+	"cargo build":     {AssetKey: "rust", DisplayName: "Cargo Build (Rust)"},
+	"cargo test":      {AssetKey: "rust", DisplayName: "Cargo Test (Rust)"},
+	"cargo run":       {AssetKey: "rust", DisplayName: "Cargo Run (Rust)"},
+	"cargo check":     {AssetKey: "rust", DisplayName: "Cargo Check (Rust)"},
+	"go build":        {AssetKey: "golang", DisplayName: "Go Build"},
+	"go test":         {AssetKey: "golang", DisplayName: "Go Test"},
+	"go run":          {AssetKey: "golang", DisplayName: "Go Run"},
+	"go mod":          {AssetKey: "golang", DisplayName: "Go Modules"},
+	"git commit":      {AssetKey: "git", DisplayName: "Git Commit"},
+	"git push":        {AssetKey: "git", DisplayName: "Git Push"},
+	"git pull":        {AssetKey: "git", DisplayName: "Git Pull"},
+	"git status":      {AssetKey: "git", DisplayName: "Git Status"},
+	"git diff":        {AssetKey: "git", DisplayName: "Git Diff"},
+	"npm run":         {AssetKey: "npm", DisplayName: "NPM Script"},
+	"npm test":        {AssetKey: "npm", DisplayName: "NPM Test"},
+	"npm install":     {AssetKey: "npm", DisplayName: "NPM Install"},
+	"pnpm run":        {AssetKey: "pnpm", DisplayName: "PNPM Script"},
+	"yarn run":        {AssetKey: "yarn", DisplayName: "Yarn Script"},
+	"bun run":         {AssetKey: "bun", DisplayName: "Bun Run"},
+
 	// Programming Languages & Toolchains
 	"go":      {AssetKey: "golang", DisplayName: "Go Toolchain"},
 	"cargo":   {AssetKey: "rust", DisplayName: "Cargo (Rust)"},
@@ -82,6 +185,7 @@ var toolAssetMap = map[string]ToolAssetInfo{
 	"python":  {AssetKey: "python", DisplayName: "Python"},
 	"python3": {AssetKey: "python", DisplayName: "Python 3"},
 	"py":      {AssetKey: "python", DisplayName: "Python"},
+	"pytest":  {AssetKey: "python", DisplayName: "Pytest"},
 	"node":    {AssetKey: "nodejs", DisplayName: "Node.js"},
 	"npm":     {AssetKey: "npm", DisplayName: "NPM"},
 	"yarn":    {AssetKey: "yarn", DisplayName: "Yarn"},
@@ -98,8 +202,7 @@ var toolAssetMap = map[string]ToolAssetInfo{
 	"cmake":   {AssetKey: "cmake", DisplayName: "CMake"},
 
 	// DevOps & Containers
-	"docker":     {AssetKey: "docker", DisplayName: "Docker"},
-	"docker-compose": {AssetKey: "docker", DisplayName: "Docker Compose"},
+	"docker":     {AssetKey: "docker", DisplayName: "Docker Engine"},
 	"podman":     {AssetKey: "podman", DisplayName: "Podman"},
 	"kubectl":    {AssetKey: "kubernetes", DisplayName: "Kubernetes CLI"},
 	"k8s":        {AssetKey: "kubernetes", DisplayName: "Kubernetes"},
@@ -118,6 +221,8 @@ var toolAssetMap = map[string]ToolAssetInfo{
 	"btop":   {AssetKey: "terminal", DisplayName: "Btop Monitor"},
 	"curl":   {AssetKey: "network", DisplayName: "cURL Transfer"},
 	"ping":   {AssetKey: "network", DisplayName: "Network Ping"},
+	"ssh":    {AssetKey: "ssh", DisplayName: "Secure Shell (SSH)"},
+
 	// AI & Coding Agents
 	"agy":             {AssetKey: "antigravity", DisplayName: "Antigravity AI Agent"},
 	"antigravity":     {AssetKey: "antigravity", DisplayName: "Antigravity AI Agent"},
@@ -137,16 +242,26 @@ func ResolveToolAsset(rawCmd string) ToolAssetInfo {
 		return ToolAssetInfo{AssetKey: "terminal", DisplayName: "Terminal"}
 	}
 
-	// Extract the base command name (e.g. "git" from "git commit -m ...")
 	fields := strings.Fields(trimmed)
-	baseCmd := strings.ToLower(fields[0])
+	if len(fields) == 0 {
+		return ToolAssetInfo{AssetKey: "terminal", DisplayName: "Terminal"}
+	}
 
-	// Remove common file extension if on Windows (e.g. "cargo.exe" -> "cargo")
+	// 1. Check compound 2-word command (e.g. "docker compose", "cargo build")
+	if len(fields) >= 2 {
+		compound := strings.ToLower(fields[0] + " " + fields[1])
+		compound = strings.TrimSuffix(compound, ".exe")
+		if info, found := toolAssetMap[compound]; found {
+			return info
+		}
+	}
+
+	// 2. Check base 1-word command (e.g. "docker", "git")
+	baseCmd := strings.ToLower(fields[0])
 	baseCmd = strings.TrimSuffix(baseCmd, ".exe")
 	baseCmd = strings.TrimSuffix(baseCmd, ".cmd")
 	baseCmd = strings.TrimSuffix(baseCmd, ".bat")
 
-	// Match in the tool asset map
 	if info, found := toolAssetMap[baseCmd]; found {
 		return info
 	}

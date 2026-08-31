@@ -18,9 +18,10 @@ const Version = "1.0.0"
 
 func main() {
 	clientID := flag.String("client-id", "", "Discord Application Client ID")
+	largeImage := flag.String("large-image", "", "Main Large Image asset key (e.g. fubuki)")
 	githubURL := flag.String("github-url", "", "GitHub repository link to display on Discord profile")
-	idleMinutes := flag.Int("idle-timeout", 10, "Minutes of inactivity before switching to AFK state")
-	rateLimitSec := flag.Int("rate-limit", 15, "Minimum seconds between Discord Rich Presence updates")
+	idleMinutes := flag.Int("idle-timeout", 0, "Minutes of inactivity before switching to AFK state")
+	rateLimitSec := flag.Int("rate-limit", 0, "Minimum seconds between Discord Rich Presence updates")
 	showVersion := flag.Bool("version", false, "Print version information and exit")
 	flag.Parse()
 
@@ -29,9 +30,12 @@ func main() {
 		return
 	}
 
-	cfg := config.DefaultConfig()
+	cfg := config.LoadConfig()
 	if *clientID != "" {
 		cfg.DiscordClientID = *clientID
+	}
+	if *largeImage != "" {
+		cfg.LargeImageKey = *largeImage
 	}
 	if *githubURL != "" {
 		cfg.GitHubURL = *githubURL
@@ -46,6 +50,7 @@ func main() {
 	log.Printf("==================================================")
 	log.Printf(" Sol Daemon v%s Starting...", Version)
 	log.Printf(" Discord Client ID : %s", cfg.DiscordClientID)
+	log.Printf(" Large Image Key    : %s", cfg.LargeImageKey)
 	if cfg.GitHubURL != "" {
 		log.Printf(" GitHub Repository  : %s", cfg.GitHubURL)
 	}

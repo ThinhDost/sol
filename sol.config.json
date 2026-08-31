@@ -1,8 +1,10 @@
 {
   "client_id": "1543849393432698940",
+  "large_image_key": "fubuki",
+  "large_image_text": "Sol Terminal",
   "github_url": "https://github.com/ThinhDost/sol",
   "idle_timeout_minutes": 10,
-  "rate_limit_seconds": 15,
+  "rate_limit_seconds": 3,
   "mask_secrets": true,
   "anonymize_home_path": true
 }
