@@ -18,25 +18,25 @@ To solve this, **Sol** employs a **Decoupled 2-Tier Architecture**:
 ```mermaid
 flowchart TB
     subgraph Shell Layer ["1. Shell Hook Layer (Zero Latency)"]
-        PS[PowerShell Hook<br>Sol.psm1]
-        Bash[Bash Hook<br>sol.bash]
+        PS["PowerShell Hook<br/>Sol.psm1"]
+        Bash["Bash Hook<br/>sol.bash"]
     end
 
     subgraph IPC Layer ["2. Sol Local IPC (Fire & Forget)"]
-        Pipe[Windows: \\.\pipe\sol-ipc<br>Unix: /tmp/sol.sock]
+        Pipe["Windows: \\\\.\\pipe\\sol-ipc<br/>Unix: /tmp/sol.sock"]
     end
 
     subgraph Daemon Layer ["3. Sol Core Daemon (Background Service)"]
-        Ingest[Event Receiver / Queue]
-        Sanitizer[Privacy Sanitizer & Secret Redactor]
-        GitEng[Zero-Process Git & Context Detector]
-        StateMach[State Machine: RUNNING / IDLE / AFK]
-        RateLimit[15s Rate Limiter & Debounce Scheduler]
-        DClient[Discord IPC Dispatcher]
+        Ingest["Event Receiver / Queue"]
+        Sanitizer["Privacy Sanitizer & Secret Redactor"]
+        GitEng["Zero-Process Git & Context Detector"]
+        StateMach["State Machine: RUNNING / IDLE / AFK"]
+        RateLimit["15s Rate Limiter & Debounce Scheduler"]
+        DClient["Discord IPC Dispatcher"]
     end
 
     subgraph Discord Layer ["4. Discord Client"]
-        DIPC[Discord Desktop Socket<br>\\.\pipe\discord-ipc-0]
+        DIPC["Discord Desktop Socket<br/>\\\\.\\pipe\\discord-ipc-0"]
     end
 
     PS -->|Fast Non-blocking Write| Pipe

@@ -34,24 +34,24 @@ Sol operates on a **2-tier decoupled architecture** to ensure the shell prompt i
 ```mermaid
 flowchart LR
     subgraph Shell ["Shell Hooks (< 0.5ms)"]
-        PS[PowerShell Hook<br>Sol.psm1]
-        Bash[Bash Hook<br>sol.bash]
+        PS["PowerShell Hook<br/>Sol.psm1"]
+        Bash["Bash Hook<br/>sol.bash"]
     end
 
     subgraph IPC ["Sol Local IPC"]
-        Pipe[Windows Named Pipe: \\.\pipe\sol-ipc<br>Unix Socket: /tmp/sol.sock]
+        Pipe["Windows: \\\\.\\pipe\\sol-ipc<br/>Unix: /tmp/sol.sock"]
     end
 
     subgraph Daemon ["Sol Background Daemon"]
-        Sanitize[Privacy Sanitizer]
-        Git[Zero-Process Git]
-        State[State Machine]
-        Rate[15s Rate Limiter]
-        Client[Discord Dispatcher]
+        Sanitize["Privacy Sanitizer"]
+        Git["Zero-Process Git"]
+        State["State Machine"]
+        Rate["15s Rate Limiter"]
+        Client["Discord Dispatcher"]
     end
 
     subgraph Discord ["Discord Desktop"]
-        DIPC[\\.\pipe\discord-ipc-0]
+        DIPC["Discord IPC Socket<br/>\\\\.\\pipe\\discord-ipc-0"]
     end
 
     PS -->|Fire & Forget| Pipe
