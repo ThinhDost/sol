@@ -29,7 +29,9 @@
 
 ## 🚀 1-Line Quick Install
 
-Run one command in your terminal. Sol will automatically download, configure your shell profile, and start the daemon silently in the background:
+Run one command in your terminal. Sol will automatically download pre-built standalone binaries from GitHub Releases, configure your shell profile, and start the daemon silently in the background:
+
+> 💡 **Zero Dependencies Required:** You do **not** need `Go`, `Git`, or any build tools installed on your machine!
 
 ### 🪟 Windows (PowerShell)
 ```powershell

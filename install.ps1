@@ -2,8 +2,8 @@
 .SYNOPSIS
     Sol One-Line Automated Installer for Windows (PowerShell).
 .DESCRIPTION
-    Installs Sol, sets up shell hooks, registers to $PROFILE and Windows Startup,
-    and launches the background daemon immediately.
+    Installs pre-compiled Sol standalone binaries, configures shell profile,
+    and launches background daemon. ZERO dependencies required (No Go, No Git needed).
 #>
 
 $ErrorActionPreference = "Continue"
@@ -21,44 +21,52 @@ if (-not (Test-Path $SolBin)) {
 }
 
 $RepoRawUrl = "https://raw.githubusercontent.com/ThinhDost/sol/main"
+$ReleaseUrl = "https://github.com/ThinhDost/sol/releases/latest/download"
 
-# Download or copy module
+# Destination paths
 $ModuleDest = Join-Path $SolHome "Sol.psm1"
 $ConfigDest = Join-Path $SolHome "sol.config.json"
+$DaemonExe = Join-Path $SolBin "sol-daemon.exe"
+$CliExe = Join-Path $SolBin "sol.exe"
 
-# Check if running locally inside repo or via web irm
+# 1. Download or copy PowerShell hook module and config
 if (Test-Path "$PSScriptRoot\shells\powershell\Sol.psm1") {
     Copy-Item "$PSScriptRoot\shells\powershell\Sol.psm1" -Destination $ModuleDest -Force
     if (Test-Path "$PSScriptRoot\sol.config.json") {
         Copy-Item "$PSScriptRoot\sol.config.json" -Destination $ConfigDest -Force
     }
 } else {
-    Write-Host "  [*] Downloading Sol module files..." -ForegroundColor Cyan
+    Write-Host "  [*] Downloading Sol shell hook and config..." -ForegroundColor Cyan
     Invoke-RestMethod -Uri "$RepoRawUrl/shells/powershell/Sol.psm1" -OutFile $ModuleDest
     Invoke-RestMethod -Uri "$RepoRawUrl/sol.config.json" -OutFile $ConfigDest
 }
 
-# Build or place binaries
-$DaemonExe = Join-Path $SolBin "sol-daemon.exe"
-$CliExe = Join-Path $SolBin "sol.exe"
-
+# 2. Download pre-compiled standalone binaries (Zero runtime / Go / Git required!)
 if (Test-Path "$PSScriptRoot\bin\sol-daemon.exe") {
     Copy-Item "$PSScriptRoot\bin\sol-daemon.exe" -Destination $DaemonExe -Force
     Copy-Item "$PSScriptRoot\bin\sol.exe" -Destination $CliExe -Force
-} elseif (Get-Command go -ErrorAction SilentlyContinue) {
-    Write-Host "  [*] Compiling optimized Sol binaries with Go..." -ForegroundColor Cyan
-    $TempDir = Join-Path $env:TEMP "sol-build-$(Get-Random)"
-    git clone --depth 1 https://github.com/ThinhDost/sol.git $TempDir 2>$null
-    if (Test-Path $TempDir) {
-        Push-Location $TempDir
-        go build -ldflags="-s -w" -o $DaemonExe ./cmd/sol-daemon
-        go build -ldflags="-s -w" -o $CliExe ./cmd/sol-cli
-        Pop-Location
-        Remove-Item -Recurse -Force $TempDir -ErrorAction SilentlyContinue
+} else {
+    Write-Host "  [*] Downloading pre-built standalone binaries from GitHub Release..." -ForegroundColor Cyan
+    try {
+        Invoke-WebRequest -Uri "$ReleaseUrl/sol-windows-amd64.exe" -OutFile $DaemonExe -UseBasicParsing
+        Invoke-WebRequest -Uri "$ReleaseUrl/sol-windows-amd64-cli.exe" -OutFile $CliExe -UseBasicParsing
+    } catch {
+        Write-Host "  [!] Release download fallback: compiling from source..." -ForegroundColor Yellow
+        if (Get-Command go -ErrorAction SilentlyContinue) {
+            $TempDir = Join-Path $env:TEMP "sol-build-$(Get-Random)"
+            git clone --depth 1 https://github.com/ThinhDost/sol.git $TempDir 2>$null
+            if (Test-Path $TempDir) {
+                Push-Location $TempDir
+                go build -ldflags="-s -w" -o $DaemonExe ./cmd/sol-daemon
+                go build -ldflags="-s -w" -o $CliExe ./cmd/sol-cli
+                Pop-Location
+                Remove-Item -Recurse -Force $TempDir -ErrorAction SilentlyContinue
+            }
+        }
     }
 }
 
-# Configure $PROFILE
+# 3. Configure PowerShell $PROFILE
 $ProfileDir = Split-Path $PROFILE -Parent
 if (-not (Test-Path $ProfileDir)) {
     New-Item -ItemType Directory -Path $ProfileDir -Force | Out-Null
@@ -75,7 +83,7 @@ if (-not $ProfileContent -or -not $ProfileContent.Contains($HookCommand)) {
     Write-Host "  [+] Added Sol hook to $PROFILE" -ForegroundColor Green
 }
 
-# Add Sol bin to User PATH environment variable if not already present
+# 4. Add Sol bin to User PATH environment variable
 $UserPath = [Environment]::GetEnvironmentVariable("Path", "User")
 if ($UserPath -notlike "*$SolBin*") {
     $NewPath = $UserPath + ";" + $SolBin
@@ -83,13 +91,13 @@ if ($UserPath -notlike "*$SolBin*") {
     $env:Path += ";$SolBin"
 }
 
-# Register Sol daemon to auto-start with Windows
+# 5. Register Sol daemon to auto-start with Windows
 try {
     $RunKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
     Set-ItemProperty -Path $RunKey -Name "SolDiscordRPC" -Value $DaemonExe -Force -ErrorAction SilentlyContinue
 } catch {}
 
-# Terminate any old instance and launch background daemon
+# 6. Terminate old instance and launch background daemon
 Get-Process -Name "sol-daemon" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 
 if (Test-Path $DaemonExe) {
@@ -97,7 +105,7 @@ if (Test-Path $DaemonExe) {
     Start-Process -FilePath $DaemonExe -WorkingDirectory $SolHome -WindowStyle Hidden
 }
 
-# Import hook into current session immediately
+# 7. Import hook into current session immediately
 if (Test-Path $ModuleDest) {
     Import-Module $ModuleDest -Force
 }
