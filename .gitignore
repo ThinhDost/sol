@@ -1,0 +1,18 @@
+# Binaries
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Output & Logs
+*.log
+*.tmp
+
+# Environment & Local Overrides
+.env
+.env.local
+
+# OS Specific
+.DS_Store
+Thumbs.db
