@@ -2,14 +2,14 @@
 .SYNOPSIS
     Sol One-Line Automated Installer for Windows (PowerShell).
 .DESCRIPTION
-    Installs Sol, sets up shell hooks, registers to $PROFILE,
+    Installs Sol, sets up shell hooks, registers to $PROFILE and Windows Startup,
     and launches the background daemon immediately.
 #>
 
 $ErrorActionPreference = "Continue"
 
 Write-Host ""
-Write-Host "  ☀️ Installing Sol - Terminal Discord Rich Presence..." -ForegroundColor Yellow
+Write-Host "  [+] Installing Sol - Terminal Discord Rich Presence..." -ForegroundColor Yellow
 Write-Host ""
 
 $SolHome = Join-Path $env:USERPROFILE ".sol"
@@ -33,7 +33,7 @@ if (Test-Path "$PSScriptRoot\shells\powershell\Sol.psm1") {
         Copy-Item "$PSScriptRoot\sol.config.json" -Destination $ConfigDest -Force
     }
 } else {
-    Write-Host "  ⬇️ Downloading Sol module files..." -ForegroundColor Cyan
+    Write-Host "  [*] Downloading Sol module files..." -ForegroundColor Cyan
     Invoke-RestMethod -Uri "$RepoRawUrl/shells/powershell/Sol.psm1" -OutFile $ModuleDest
     Invoke-RestMethod -Uri "$RepoRawUrl/sol.config.json" -OutFile $ConfigDest
 }
@@ -46,7 +46,7 @@ if (Test-Path "$PSScriptRoot\bin\sol-daemon.exe") {
     Copy-Item "$PSScriptRoot\bin\sol-daemon.exe" -Destination $DaemonExe -Force
     Copy-Item "$PSScriptRoot\bin\sol.exe" -Destination $CliExe -Force
 } elseif (Get-Command go -ErrorAction SilentlyContinue) {
-    Write-Host "  🔨 Compiling optimized Sol binaries with Go..." -ForegroundColor Cyan
+    Write-Host "  [*] Compiling optimized Sol binaries with Go..." -ForegroundColor Cyan
     $TempDir = Join-Path $env:TEMP "sol-build-$(Get-Random)"
     git clone --depth 1 https://github.com/ThinhDost/sol.git $TempDir 2>$null
     if (Test-Path $TempDir) {
@@ -68,25 +68,32 @@ if (-not (Test-Path $PROFILE)) {
 }
 
 $ProfileContent = Get-Content $PROFILE -Raw -ErrorAction SilentlyContinue
-$HookCommand = "Import-Module `"$ModuleDest`""
+$HookCommand = "Import-Module '$ModuleDest'"
 
 if (-not $ProfileContent -or -not $ProfileContent.Contains($HookCommand)) {
     Add-Content -Path $PROFILE -Value "`n# Sol Discord Rich Presence`n$HookCommand"
-    Write-Host "  ✅ Added Sol hook to $PROFILE" -ForegroundColor Green
+    Write-Host "  [+] Added Sol hook to $PROFILE" -ForegroundColor Green
 }
 
 # Add Sol bin to User PATH environment variable if not already present
 $UserPath = [Environment]::GetEnvironmentVariable("Path", "User")
 if ($UserPath -notlike "*$SolBin*") {
-    [Environment]::SetEnvironmentVariable("Path", "$UserPath;$SolBin", "User")
+    $NewPath = $UserPath + ";" + $SolBin
+    [Environment]::SetEnvironmentVariable("Path", $NewPath, "User")
     $env:Path += ";$SolBin"
 }
+
+# Register Sol daemon to auto-start with Windows
+try {
+    $RunKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
+    Set-ItemProperty -Path $RunKey -Name "SolDiscordRPC" -Value $DaemonExe -Force -ErrorAction SilentlyContinue
+} catch {}
 
 # Terminate any old instance and launch background daemon
 Get-Process -Name "sol-daemon" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 
 if (Test-Path $DaemonExe) {
-    Write-Host "  🚀 Launching Sol background daemon..." -ForegroundColor Cyan
+    Write-Host "  [*] Launching Sol background daemon..." -ForegroundColor Cyan
     Start-Process -FilePath $DaemonExe -WorkingDirectory $SolHome -WindowStyle Hidden
 }
 
@@ -96,6 +103,6 @@ if (Test-Path $ModuleDest) {
 }
 
 Write-Host ""
-Write-Host "  🎉 Sol is installed and running successfully!" -ForegroundColor Green
-Write-Host "  👉 Discord Rich Presence is now active for all your terminal commands." -ForegroundColor Yellow
+Write-Host "  [OK] Sol is installed and running successfully!" -ForegroundColor Green
+Write-Host "  [!] Discord Rich Presence is now active for all your terminal commands." -ForegroundColor Yellow
 Write-Host ""

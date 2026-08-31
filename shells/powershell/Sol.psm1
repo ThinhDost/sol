@@ -9,6 +9,38 @@
 
 # Name of the local Sol Named Pipe
 $script:SolPipeName = "sol-ipc"
+$script:SolHome = Join-Path $env:USERPROFILE ".sol"
+$script:SolBin = Join-Path $script:SolHome "bin"
+$script:DaemonExe = Join-Path $script:SolBin "sol-daemon.exe"
+
+# Function to ensure Sol background daemon is running seamlessly
+function Start-SolDaemonIfNeeded {
+    try {
+        $proc = Get-Process -Name "sol-daemon" -ErrorAction SilentlyContinue
+        if (-not $proc) {
+            $daemonPath = $null
+            if (Test-Path $script:DaemonExe) {
+                $daemonPath = $script:DaemonExe
+            } elseif (Test-Path "$PSScriptRoot\..\..\bin\sol-daemon.exe") {
+                $daemonPath = (Resolve-Path "$PSScriptRoot\..\..\bin\sol-daemon.exe").Path
+            } elseif (Test-Path "$PSScriptRoot\bin\sol-daemon.exe") {
+                $daemonPath = (Resolve-Path "$PSScriptRoot\bin\sol-daemon.exe").Path
+            }
+
+            if ($daemonPath) {
+                $workingDir = Split-Path $daemonPath -Parent
+                $configParent = Split-Path $workingDir -Parent
+                if (Test-Path (Join-Path $configParent "sol.config.json")) {
+                    $workingDir = $configParent
+                }
+                Start-Process -FilePath $daemonPath -WorkingDirectory $workingDir -WindowStyle Hidden -ErrorAction SilentlyContinue
+                Start-Sleep -Milliseconds 200
+            }
+        }
+    } catch {
+        # Fail silently
+    }
+}
 
 # Function to send an event asynchronously to Sol daemon
 function Send-SolEvent {
@@ -25,9 +57,9 @@ function Send-SolEvent {
     )
 
     try {
-        # Connect to Windows Named Pipe with 10ms timeout (never blocks terminal)
+        # Connect to Windows Named Pipe with 15ms timeout (never blocks terminal)
         $pipe = New-Object System.IO.Pipes.NamedPipeClientStream(".", $script:SolPipeName, [System.IO.Pipes.PipeDirection]::Out)
-        $pipe.Connect(10)
+        $pipe.Connect(15)
         
         $writer = New-Object System.IO.StreamWriter($pipe)
         $writer.AutoFlush = $true
@@ -43,7 +75,8 @@ function Send-SolEvent {
         $writer.Close()
         $pipe.Close()
     } catch {
-        # Fail silently if Sol daemon is not running - zero disruption to user
+        # If pipe connection failed, spawn daemon in background for future commands
+        Start-SolDaemonIfNeeded
     }
 }
 
@@ -79,6 +112,9 @@ if (Get-Module -Name PSReadLine) {
         [Microsoft.PowerShell.PSConsoleReadLine]::AcceptLine()
     }
 }
+
+# Automatically ensure daemon is alive upon opening terminal
+Start-SolDaemonIfNeeded
 
 # Send initial connection event
 Send-SolEvent -Event "idle" -Cwd $PWD.Path
