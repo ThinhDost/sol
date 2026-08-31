@@ -20,7 +20,9 @@ RELEASE_URL="https://github.com/ThinhDost/sol/releases/latest/download"
 
 # Download hook and config
 curl -fsSL "$REPO_RAW_URL/shells/bash/sol.bash" -o "$SOL_HOME/sol.bash"
-curl -fsSL "$REPO_RAW_URL/sol.config.json" -o "$SOL_HOME/sol.config.json"
+if [ ! -f "$SOL_HOME/sol.config.json" ]; then
+    curl -fsSL "$REPO_RAW_URL/sol.config.json" -o "$SOL_HOME/sol.config.json"
+fi
 chmod +x "$SOL_HOME/sol.bash"
 
 # Detect OS and Architecture

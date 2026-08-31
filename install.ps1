@@ -36,9 +36,13 @@ if (Test-Path "$PSScriptRoot\shells\powershell\Sol.psm1") {
         Copy-Item "$PSScriptRoot\sol.config.json" -Destination $ConfigDest -Force
     }
 } else {
-    Write-Host "  [*] Downloading Sol shell hook and config..." -ForegroundColor Cyan
+    Write-Host "  [*] Downloading Sol shell hook..." -ForegroundColor Cyan
     Invoke-RestMethod -Uri "$RepoRawUrl/shells/powershell/Sol.psm1" -OutFile $ModuleDest
-    Invoke-RestMethod -Uri "$RepoRawUrl/sol.config.json" -OutFile $ConfigDest
+    if (-not (Test-Path $ConfigDest)) {
+        Invoke-RestMethod -Uri "$RepoRawUrl/sol.config.json" -OutFile $ConfigDest
+    } else {
+        Write-Host "  [*] Preserving existing configuration ($ConfigDest)" -ForegroundColor Cyan
+    }
 }
 
 # 2. Download pre-compiled standalone binaries (Zero runtime / Go / Git required!)

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"os/exec"
 	"runtime"
 	"time"
 
@@ -28,6 +29,9 @@ func main() {
 	switch command {
 	case "status", "ping":
 		checkStatus()
+
+	case "update", "upgrade":
+		runUpdate()
 
 	case "notify":
 		notifyFlags := flag.NewFlagSet("notify", flag.ExitOnError)
@@ -52,6 +56,7 @@ func main() {
 func printUsage() {
 	fmt.Printf("Sol CLI v%s - Discord Rich Presence for Terminal\n\n", Version)
 	fmt.Println("Usage:")
+	fmt.Println("  sol update               Update Sol to the latest release")
 	fmt.Println("  sol status               Check if Sol daemon is running")
 	fmt.Println("  sol ping                 Ping the Sol daemon")
 	fmt.Println("  sol notify [options]     Send an event to Sol daemon")
@@ -115,4 +120,20 @@ func sendNotification(eventType, cmd, cwd, shell string) {
 	defer conn.Close()
 
 	_, _ = conn.Write(data)
+}
+
+func runUpdate() {
+	fmt.Println("☀️ Updating Sol to the latest version...")
+	var cmd *exec.Cmd
+	if runtime.GOOS == "windows" {
+		cmd = exec.Command("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "irm https://raw.githubusercontent.com/ThinhDost/sol/main/install.ps1 | iex")
+	} else {
+		cmd = exec.Command("bash", "-c", "curl -fsSL https://raw.githubusercontent.com/ThinhDost/sol/main/install.sh | bash")
+	}
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		fmt.Printf("❌ Update failed: %v\n", err)
+		os.Exit(1)
+	}
 }
