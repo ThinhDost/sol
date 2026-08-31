@@ -10,7 +10,7 @@
 
 **An ultra-lightweight, zero-latency, cross-platform Discord Rich Presence daemon & shell hook system.**
 
-[Features](#-key-features) • [Architecture](#-architecture) • [Quick Start](#-quick-start) • [Configuration](#-configuration) • [Contributing](#-contributing)
+[Features](#-key-features) • [Quick Start](#-quick-start) • [Configuration](#-configuration) • [Testing](#-testing--verification) • [Roadmap](#-roadmap)
 
 </div>
 
@@ -24,41 +24,6 @@
 - **⏱️ Smart Rate Limiting & Debouncing:** Buffers rapid command execution to strictly comply with Discord's 15-second IPC rate limit without dropping state transitions.
 - **💤 Intelligent Idle & AFK Detection:** Automatically transitions from active command execution (`RUNNING`) to prompt waiting (`IDLE`), and marks as `AFK / Taking a break` after inactivity.
 - **📦 Single Self-Contained Binary (< 3.6MB):** Compiled with stripped debug symbols and zero external runtime dependencies.
-
----
-
-## 📐 Architecture & Dataflow
-
-Sol operates on a **2-tier decoupled architecture** to ensure the shell prompt is never blocked by Discord IPC handshakes:
-
-```mermaid
-flowchart LR
-    subgraph Shell ["Shell Hooks (< 0.5ms)"]
-        PS["PowerShell Hook<br/>Sol.psm1"]
-        Bash["Bash Hook<br/>sol.bash"]
-    end
-
-    subgraph IPC ["Sol Local IPC"]
-        Pipe["Windows: \\\\.\\pipe\\sol-ipc<br/>Unix: /tmp/sol.sock"]
-    end
-
-    subgraph Daemon ["Sol Background Daemon"]
-        Sanitize["Privacy Sanitizer"]
-        Git["Zero-Process Git"]
-        State["State Machine"]
-        Rate["15s Rate Limiter"]
-        Client["Discord Dispatcher"]
-    end
-
-    subgraph Discord ["Discord Desktop"]
-        DIPC["Discord IPC Socket<br/>\\\\.\\pipe\\discord-ipc-0"]
-    end
-
-    PS -->|Fire & Forget| Pipe
-    Bash -->|Fire & Forget| Pipe
-    Pipe --> Sanitize --> Git --> State --> Rate --> Client
-    Client -->|Binary Framed JSON| DIPC
-```
 
 ---
 
