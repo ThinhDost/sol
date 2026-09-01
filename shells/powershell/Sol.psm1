@@ -64,12 +64,12 @@ function Send-SolEvent {
         $writer = New-Object System.IO.StreamWriter($pipe)
         $writer.AutoFlush = $true
 
-        # Construct compact JSON payload
+        # Construct compact JSON payload with Process ID (PID)
         $escapedCmd = ($Cmd -replace '\\', '\\\\' -replace '"', '\"' -replace "`n", ' ' -replace "`r", '')
         $escapedCwd = ($Cwd -replace '\\', '/')
         $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
         
-        $json = "{`"event`":`"$Event`",`"cmd`":`"$escapedCmd`",`"cwd`":`"$escapedCwd`",`"shell`":`"powershell`",`"timestamp`":$timestamp}`n"
+        $json = "{`"event`":`"$Event`",`"cmd`":`"$escapedCmd`",`"cwd`":`"$escapedCwd`",`"shell`":`"powershell`",`"pid`":$PID,`"timestamp`":$timestamp}`n"
         
         $writer.WriteLine($json)
         $writer.Close()
@@ -112,6 +112,13 @@ if (Get-Module -Name PSReadLine) {
         [Microsoft.PowerShell.PSConsoleReadLine]::AcceptLine()
     }
 }
+
+# Register clean exit event when terminal window / tab closes
+try {
+    Register-EngineEvent -SourceIdentifier PowerShell.Exiting -Action {
+        Send-SolEvent -Event "exit" -Cwd $PWD.Path
+    } -ErrorAction SilentlyContinue | Out-Null
+} catch {}
 
 # Automatically ensure daemon is alive upon opening terminal
 Start-SolDaemonIfNeeded

@@ -104,9 +104,9 @@ func (c *Coordinator) handleShellEvent(event *ipc.ShellEvent) {
 	c.rateLimiter.Submit(activity)
 }
 
-// handleTick checks idle timeouts and attempts reconnection if Discord was closed.
+// handleTick checks process liveness, idle timeouts, and attempts reconnection if Discord was closed.
 func (c *Coordinator) handleTick() {
-	if c.stateManager.CheckIdleTimeout() {
+	if c.stateManager.CleanupDeadProcesses() || c.stateManager.CheckIdleTimeout() {
 		activity := c.stateManager.BuildDiscordActivity()
 		c.rateLimiter.Submit(activity)
 	}

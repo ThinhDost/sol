@@ -17,7 +17,7 @@ __sol_emit() {
     local escaped_cmd
     escaped_cmd=$(printf '%s' "$cmd" | sed 's/\\/\\\\/g; s/"/\\"/g')
 
-    local json="{\"event\":\"$event\",\"cmd\":\"$escaped_cmd\",\"cwd\":\"$cwd\",\"shell\":\"bash\",\"timestamp\":$ts}"
+    local json="{\"event\":\"$event\",\"cmd\":\"$escaped_cmd\",\"cwd\":\"$cwd\",\"shell\":\"bash\",\"pid\":$$,\"timestamp\":$ts}"
 
     # Write asynchronously to socket using netcat / socat or python fallback if socket exists
     if [ -S "$SOL_SOCKET" ]; then
@@ -47,8 +47,14 @@ __sol_prompt_hook() {
     return $exit_code
 }
 
+# Exit hook when terminal closes
+__sol_exit() {
+    __sol_emit "exit" ""
+}
+
 # Install DEBUG trap if not already set
 trap '__sol_preexec' DEBUG
+trap '__sol_exit' EXIT
 
 # Chain with existing PROMPT_COMMAND
 if [[ -z "$PROMPT_COMMAND" ]]; then
