@@ -16,6 +16,14 @@ const DefaultDiscordClientID = "1543849393432698940"
 // DefaultGitHubURL is the default repository link displayed on Discord Rich Presence.
 const DefaultGitHubURL = "https://github.com/ThinhDost/sol"
 
+// Path display mode constants for directory privacy
+const (
+	PathModeBasename       = "basename"
+	PathModeParentBasename = "parent_basename"
+	PathModeRelative       = "relative"
+	PathModeHidden         = "hidden"
+)
+
 // Config represents the runtime configuration for the Sol daemon.
 type Config struct {
 	// DiscordClientID is the Discord Application ID registered on Discord Developer Portal.
@@ -26,6 +34,9 @@ type Config struct {
 
 	// LargeImageText is the hover tooltip for the main presence icon.
 	LargeImageText string `json:"large_image_text"`
+
+	// PathDisplayMode controls how directories are sanitized ("basename", "parent_basename", "relative", "hidden").
+	PathDisplayMode string `json:"path_display_mode,omitempty"`
 
 	// GitHubURL is the optional repository link added as an interactive button on your Discord profile.
 	GitHubURL string `json:"github_url,omitempty"`
@@ -66,6 +77,11 @@ func DefaultConfig() *Config {
 		largeText = "Sol Terminal"
 	}
 
+	pathMode := os.Getenv("SOL_PATH_MODE")
+	if pathMode == "" {
+		pathMode = PathModeBasename
+	}
+
 	githubURL := os.Getenv("SOL_GITHUB_URL")
 	if githubURL == "" {
 		githubURL = DefaultGitHubURL
@@ -75,6 +91,7 @@ func DefaultConfig() *Config {
 		DiscordClientID:   clientID,
 		LargeImageKey:     largeImage,
 		LargeImageText:    largeText,
+		PathDisplayMode:   pathMode,
 		GitHubURL:         githubURL,
 		PipeNameWindows:   `\\.\pipe\sol-ipc`,
 		SocketPathUnix:    "/tmp/sol.sock",
@@ -102,6 +119,7 @@ func LoadConfig() *Config {
 				ClientID          string `json:"client_id"`
 				LargeImageKey     string `json:"large_image_key"`
 				LargeImageText    string `json:"large_image_text"`
+				PathDisplayMode   string `json:"path_display_mode"`
 				GitHubURL         string `json:"github_url"`
 				IdleMinutes       int    `json:"idle_timeout_minutes"`
 				RateLimitSeconds  int    `json:"rate_limit_seconds"`
@@ -117,6 +135,9 @@ func LoadConfig() *Config {
 				}
 				if fileCfg.LargeImageText != "" {
 					cfg.LargeImageText = fileCfg.LargeImageText
+				}
+				if fileCfg.PathDisplayMode != "" {
+					cfg.PathDisplayMode = fileCfg.PathDisplayMode
 				}
 				if fileCfg.GitHubURL != "" {
 					cfg.GitHubURL = fileCfg.GitHubURL

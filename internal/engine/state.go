@@ -2,7 +2,6 @@ package engine
 
 import (
 	"fmt"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -244,11 +243,8 @@ func (sm *StateManager) BuildDiscordActivity() *discord.Activity {
 		if gitInfo, err := git.DetectGitContext(cwd); err == nil {
 			gitCtx = fmt.Sprintf("📁 %s [git: %s]", gitInfo.RepoName, gitInfo.Branch)
 		} else {
-			dirName := filepath.Base(cwd)
-			if sm.cfg.AnonymizeHomePath {
-				dirName = AnonymizePath(cwd)
-			}
-			gitCtx = fmt.Sprintf("📁 %s", dirName)
+			pathDisplay := AnonymizePath(cwd, sm.cfg.PathDisplayMode)
+			gitCtx = fmt.Sprintf("📁 %s", pathDisplay)
 		}
 	} else {
 		gitCtx = "Terminal Session"

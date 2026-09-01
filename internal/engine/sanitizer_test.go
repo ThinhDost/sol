@@ -2,6 +2,8 @@ package engine
 
 import (
 	"testing"
+
+	"github.com/sol-rpc/sol/internal/config"
 )
 
 func TestSanitizeCommand(t *testing.T) {
@@ -52,6 +54,49 @@ func TestSanitizeCommand(t *testing.T) {
 			result := SanitizeCommand(tt.input)
 			if result != tt.expected {
 				t.Errorf("SanitizeCommand(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestAnonymizePath(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		mode     string
+		expected string
+	}{
+		{
+			name:     "windows deep drive path - basename mode",
+			input:    `D:\TaiLieu\CyberSec\PentestAssets\reconnaissance\Tool`,
+			mode:     config.PathModeBasename,
+			expected: "Tool",
+		},
+		{
+			name:     "windows deep drive path - parent_basename mode",
+			input:    `D:\TaiLieu\CyberSec\PentestAssets\reconnaissance\Tool`,
+			mode:     config.PathModeParentBasename,
+			expected: "reconnaissance/Tool",
+		},
+		{
+			name:     "windows deep drive path - hidden mode",
+			input:    `D:\TaiLieu\CyberSec\PentestAssets\reconnaissance\Tool`,
+			mode:     config.PathModeHidden,
+			expected: "Workspace",
+		},
+		{
+			name:     "empty path fallback",
+			input:    "",
+			mode:     config.PathModeBasename,
+			expected: "Workspace",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := AnonymizePath(tt.input, tt.mode)
+			if result != tt.expected {
+				t.Errorf("AnonymizePath(%q, %q) = %q, want %q", tt.input, tt.mode, result, tt.expected)
 			}
 		})
 	}

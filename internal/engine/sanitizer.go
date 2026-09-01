@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/sol-rpc/sol/internal/config"
 )
 
 // Regex patterns to identify and redact sensitive credentials
@@ -61,25 +63,93 @@ func SanitizeCommand(cmd string) string {
 	return cleaned
 }
 
-// AnonymizePath replaces the user's home directory path with '~' and normalizes directory separators.
-func AnonymizePath(rawPath string) string {
+// AnonymizePath strips drive letters and full internal machine paths to protect privacy.
+// Modes:
+// - "basename" (default): Returns only the current folder name (e.g., "Tool" or "~").
+// - "parent_basename": Returns "parent/current" (e.g., "reconnaissance/Tool").
+// - "relative": Returns path relative to home "~" or stripped of drive letters.
+// - "hidden": Returns "Workspace".
+func AnonymizePath(rawPath string, mode string) string {
 	if rawPath == "" {
-		return ""
+		return "Workspace"
+	}
+
+	if mode == config.PathModeHidden {
+		return "Workspace"
 	}
 
 	clean := filepath.Clean(rawPath)
+	cleanSlash := filepath.ToSlash(clean)
+
+	// Check if this path matches user's home directory
 	homeDir, err := os.UserHomeDir()
+	isHome := false
+	var homeRel string
 	if err == nil && homeDir != "" {
 		cleanHome := filepath.Clean(homeDir)
-		if strings.HasPrefix(strings.ToLower(clean), strings.ToLower(cleanHome)) {
+		if strings.EqualFold(clean, cleanHome) {
+			isHome = true
+			homeRel = ""
+		} else if strings.HasPrefix(strings.ToLower(clean), strings.ToLower(cleanHome)+string(filepath.Separator)) {
 			rel := clean[len(cleanHome):]
 			rel = strings.TrimPrefix(rel, string(filepath.Separator))
-			if rel == "" {
-				return "~"
-			}
-			return "~/" + filepath.ToSlash(rel)
+			homeRel = filepath.ToSlash(rel)
 		}
 	}
 
-	return filepath.ToSlash(clean)
+	if isHome {
+		return "~"
+	}
+
+	// 1. Mode: Basename (Default & Safest)
+	if mode == "" || mode == config.PathModeBasename {
+		if homeRel != "" {
+			return filepath.Base(homeRel)
+		}
+		base := filepath.Base(clean)
+		// If at volume root (e.g. "D:\" or "/")
+		if base == "." || base == "/" || base == "\\" || strings.HasSuffix(clean, ":") || strings.HasSuffix(clean, ":\\") {
+			return "Root"
+		}
+		return base
+	}
+
+	// 2. Mode: Parent + Basename (e.g. "reconnaissance/Tool")
+	if mode == config.PathModeParentBasename {
+		parts := strings.Split(strings.Trim(cleanSlash, "/"), "/")
+		// Strip drive letter if present (e.g. "D:")
+		if len(parts) > 0 && strings.HasSuffix(parts[0], ":") {
+			parts = parts[1:]
+		}
+		if len(parts) >= 2 {
+			return parts[len(parts)-2] + "/" + parts[len(parts)-1]
+		} else if len(parts) == 1 && parts[0] != "" {
+			return parts[0]
+		}
+		return "Root"
+	}
+
+	// 3. Mode: Relative
+	if homeRel != "" {
+		return "~/" + homeRel
+	}
+
+	// Strip drive letter (e.g. "D:/...")
+	vol := filepath.VolumeName(clean)
+	if vol != "" {
+		cleanSlash = strings.TrimPrefix(cleanSlash, filepath.ToSlash(vol))
+		cleanSlash = strings.TrimPrefix(cleanSlash, "/")
+	}
+
+	if cleanSlash == "" {
+		return "Root"
+	}
+
+	// If the path is too long (> 35 chars), abbreviate middle components: .../parent/current
+	parts := strings.Split(cleanSlash, "/")
+	if len(parts) > 2 && len(cleanSlash) > 35 {
+		return ".../" + parts[len(parts)-2] + "/" + parts[len(parts)-1]
+	}
+
+	return cleanSlash
 }
